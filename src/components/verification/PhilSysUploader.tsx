@@ -17,85 +17,81 @@ interface PhilSysUploaderProps {
   onCompressed?: (result: CompressedIdResult) => void
 }
 
+// Decimal MB keeps accepted output below both common 1MB limits.
+export const MAX_ID_BYTES = 1_000_000
+
+export async function compressImage(file: File): Promise<CompressedIdResult> {
+  if (!file.type.startsWith('image/') || file.size === 0) {
+    throw new Error('Choose a non-empty image of your PhilSys ID.')
+  }
+  const sourceUrl = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error('Image could not be decoded. Try a JPEG or PNG photo.'))
+      image.src = sourceUrl
+    })
+    if (!img.naturalWidth || !img.naturalHeight) throw new Error('Image dimensions are invalid.')
+    const scale = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight))
+    const canvas = document.createElement('canvas')
+    let width = Math.max(1, Math.round(img.naturalWidth * scale))
+    let height = Math.max(1, Math.round(img.naturalHeight * scale))
+
+    // Reduce quality first, then dimensions. Never return an oversized payload.
+    for (let attempt = 0; attempt < 12; attempt++) {
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Image compression is unavailable in this browser.')
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+      ctx.drawImage(img, 0, 0, width, height)
+      const quality = attempt === 0 ? 0.85 : attempt === 1 ? 0.7 : 0.55
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(value => value ? resolve(value) : reject(new Error('Unable to encode this image.')), 'image/jpeg', quality)
+      })
+      if (blob.type !== 'image/jpeg' || blob.size === 0) throw new Error('JPEG encoding is unavailable in this browser.')
+      if (blob.size < MAX_ID_BYTES) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = () => reject(new Error('Unable to prepare the compressed preview.'))
+          reader.readAsDataURL(blob)
+        })
+        return {
+          blob, dataUrl, originalSize: file.size, compressedSize: blob.size, width, height,
+          compressionRatioPercent: Math.max(0, Math.round((1 - blob.size / file.size) * 100)),
+        }
+      }
+      if (attempt >= 2) {
+        width = Math.max(1, Math.floor(width * 0.75))
+        height = Math.max(1, Math.floor(height * 0.75))
+      }
+    }
+    throw new Error('Unable to compress this image below 1MB. Choose another photo.')
+  } finally {
+    URL.revokeObjectURL(sourceUrl)
+  }
+}
+
 export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState<CompressedIdResult | null>(null)
   const [fileName, setFileName] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
+  const busy = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const compressImage = async (file: File): Promise<CompressedIdResult> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          // Bound dimensions to maximum 1920px for HD National ID clarity
-          const MAX_DIM = 1920
-          let width = img.width
-          let height = img.height
-
-          if (width > MAX_DIM || height > MAX_DIM) {
-            if (width > height) {
-              height = Math.round((height * MAX_DIM) / width)
-              width = MAX_DIM
-            } else {
-              width = Math.round((width * MAX_DIM) / height)
-              height = MAX_DIM
-            }
-          }
-
-          const canvas = document.createElement('canvas')
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')
-
-          if (!ctx) {
-            reject(new Error('Canvas 2D context not available'))
-            return
-          }
-
-          // Smooth resampling
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
-          ctx.drawImage(img, 0, 0, width, height)
-
-          // Compress to JPEG with 0.82 quality
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error('Failed to generate image blob'))
-                return
-              }
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
-              const originalSize = file.size
-              const compressedSize = blob.size
-              const savings = Math.max(0, Math.round(((originalSize - compressedSize) / originalSize) * 100))
-
-              resolve({
-                blob,
-                dataUrl,
-                originalSize,
-                compressedSize,
-                width,
-                height,
-                compressionRatioPercent: savings,
-              })
-            },
-            'image/jpeg',
-            0.82
-          )
-        }
-        img.onerror = () => reject(new Error('Image failed to load'))
-        img.src = e.target?.result as string
-      }
-      reader.onerror = () => reject(new Error('File reading failed'))
-      reader.readAsDataURL(file)
-    })
-  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    e.target.value = ''
+    if (!file || busy.current) return
+    busy.current = true
+    setError(null)
+    setResult(null)
 
     setProcessing(true)
     setFileName(file.name)
@@ -106,8 +102,9 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
         onCompressed(compressed)
       }
     } catch (err) {
-      console.error('PhilSys compression error:', err)
+      setError(err instanceof Error ? err.message : 'Unable to compress this image. Try again.')
     } finally {
+      busy.current = false
       setProcessing(false)
     }
   }
@@ -142,12 +139,15 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
 
       <input
         ref={fileInputRef}
+        disabled={processing}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       {!result ? (
         <div

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { UploadCloud, CheckCircle2, Copy, FileCode, AlertCircle, Loader2 } from 'lucide-react'
 
 export interface DeliverableMetadata {
@@ -18,6 +18,12 @@ interface DeliverableUploaderProps {
 }
 
 export async function computeSHA256(file: File): Promise<string> {
+  if (file.size > 200 * 1024 * 1024) {
+    throw new Error('Choose a deliverable no larger than 200MB.')
+  }
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('Secure hashing is unavailable. Open this page over HTTPS and try again.')
+  }
   const arrayBuffer = await file.arrayBuffer()
   const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
@@ -34,10 +40,17 @@ export function DeliverableUploader({
   const [metadata, setMetadata] = useState<DeliverableMetadata | null>(null)
   const [copied, setCopied] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const busy = useRef(false)
+  const inputId = `${milestoneId}-deliverable-file`
 
   const handleFile = async (file: File) => {
-    if (!file) return
+    if (busy.current) return
+    busy.current = true
     setComputing(true)
+    setMetadata(null)
+    setCopied(false)
+    setError(null)
     try {
       const hash = await computeSHA256(file)
       const data: DeliverableMetadata = {
@@ -52,8 +65,9 @@ export function DeliverableUploader({
         onDeliverableReady(data)
       }
     } catch (err) {
-      console.error('Error computing deliverable hash:', err)
+      setError(err instanceof Error ? err.message : 'Unable to hash this deliverable. Try again.')
     } finally {
+      busy.current = false
       setComputing(false)
     }
   }
@@ -90,7 +104,7 @@ export function DeliverableUploader({
             Milestone Deliverable Cryptographic Verification
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {milestoneTitle} &bull; Client-side SHA-256 seal guarantees deliverable immutability
+            {milestoneTitle} &bull; SHA-256 checksum for comparing deliverable contents
           </p>
         </div>
         <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
@@ -111,16 +125,18 @@ export function DeliverableUploader({
       >
         <input
           type="file"
-          id="deliverable-file"
+          id={inputId}
+          disabled={computing}
           className="hidden"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               handleFile(e.target.files[0])
             }
+            e.target.value = ''
           }}
         />
 
-        <label htmlFor="deliverable-file" className="cursor-pointer flex flex-col items-center">
+        <label htmlFor={inputId} className="cursor-pointer flex flex-col items-center">
           {computing ? (
             <div className="py-4 flex flex-col items-center gap-2 text-indigo-600 dark:text-indigo-400">
               <Loader2 className="w-8 h-8 animate-spin" />
@@ -141,6 +157,8 @@ export function DeliverableUploader({
           )}
         </label>
       </div>
+
+      {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
 
       {/* Metadata & Checksum Display */}
       {metadata && (
@@ -181,7 +199,7 @@ export function DeliverableUploader({
 
           <div className="flex items-center gap-2 pt-1 text-xs text-slate-600 dark:text-slate-300">
             <AlertCircle className="w-3.5 h-3.5 text-indigo-600" />
-            <span>This hash is logged on the Escrow ledger to verify final deliverable matching.</span>
+            <span>Checksum computed locally. Compare it with the received file to detect changes.</span>
           </div>
         </div>
       )}
