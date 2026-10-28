@@ -140,6 +140,7 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
       <input
         ref={fileInputRef}
         disabled={processing}
+        aria-label="Choose a PhilSys ID photo"
         type="file"
         accept="image/*"
         capture="environment"
@@ -150,9 +151,11 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
       {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
 
       {!result ? (
-        <div
+        <button
+          type="button"
+          disabled={processing}
           onClick={() => fileInputRef.current?.click()}
-          className="cursor-pointer border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-600 rounded-xl p-8 text-center transition-all bg-slate-50/50 dark:bg-slate-900/40"
+          className="w-full cursor-pointer border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-600 rounded-xl p-8 text-center transition-all bg-slate-50/50 dark:bg-slate-900/40"
         >
           {processing ? (
             <div className="flex flex-col items-center gap-2 text-emerald-600">
@@ -175,7 +178,7 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
               </div>
             </div>
           )}
-        </div>
+        </button>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -231,7 +234,7 @@ export function PhilSysUploader({ onCompressed }: PhilSysUploaderProps) {
 
           <div className="flex items-center gap-2 text-xs text-slate-500 bg-emerald-50/50 dark:bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-200/50 dark:border-emerald-900/30">
             <AlertCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>PhilSys data is securely encrypted in transit and evaluated only for identity verification compliance.</span>
+            <span>Review the compressed photo for legibility before submitting it for identity verification.</span>
           </div>
         </div>
       )}
