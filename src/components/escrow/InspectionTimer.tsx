@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Clock, ShieldCheck, AlertCircle, ArrowUpRight } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Clock, ShieldCheck, ArrowUpRight } from "lucide-react";
 import { calculateInspectionTimer, InspectionTimerState } from "@/lib/escrow-engine";
 
 interface InspectionTimerProps {
@@ -14,22 +14,26 @@ export function InspectionTimer({ inspectionEndAt, onTimerExpire, sticky = false
   const [timerState, setTimerState] = useState<InspectionTimerState>(() =>
     calculateInspectionTimer(inspectionEndAt)
   );
+  const expiredFor = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const tick = () => {
       const updated = calculateInspectionTimer(inspectionEndAt);
       setTimerState(updated);
-      if (updated.isExpired && onTimerExpire) {
-        onTimerExpire();
+      if (updated.isExpired && inspectionEndAt && expiredFor.current !== inspectionEndAt) {
+        expiredFor.current = inspectionEndAt;
+        onTimerExpire?.();
       }
-    }, 1000);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
   }, [inspectionEndAt, onTimerExpire]);
 
   if (sticky) {
     return (
-      <aside aria-label="Escrow Inspection Status" className="sticky top-0 z-30 w-full bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-cyan-500/40 px-4 py-2.5 shadow-lg">
+      <aside aria-label="Escrow Inspection Status" className="sticky top-20 z-30 w-full bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-cyan-500/40 px-4 py-2.5 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2.5 w-2.5">

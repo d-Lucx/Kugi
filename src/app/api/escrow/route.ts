@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { transitionMilestone, MilestoneState } from "@/lib/escrow-engine";
 import { calculateTaxWithholding } from "@/lib/tax-calculator";
 
-// In-memory idempotency cache for deduplication of webhook retries and rapid repeated transitions
+// Demo transition endpoint: replay protection lasts only for this server process.
+// Production webhooks require authentication and a database transaction that
+// persists the response and milestone update under the unique event key.
 const processedIdempotencyKeys = new Map<string, {
   response: any;
   timestamp: string;

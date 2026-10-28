@@ -1,6 +1,7 @@
 /**
  * BIR Revenue Regulations No. 16-2023 Tax Withholding Engine for Kugi.ph
- * Automates 0.5% Creditable Withholding Tax (CWT) calculation and BIR Form 2307 dossier preparation.
+ * Historical RR 16-2023 illustration requested for Phase 2: 1% of a 50% base.
+ * RMO 18-2025 dropped WI760/WC760. Do not use this draft engine for current filings.
  */
 
 export const BIR_CWT_THRESHOLD = 500000; // PHP 500,000.00 statutory annual threshold
@@ -54,16 +55,23 @@ export function calculateTaxWithholding(
   annualEarningsSoFar: number = 620000,
   hasSwornDeclaration: boolean = false
 ): TaxComputationResult {
+  if (!Number.isFinite(grossAmount) || grossAmount < 0 ||
+      !Number.isFinite(annualEarningsSoFar) || annualEarningsSoFar < 0) {
+    throw new RangeError("Amounts must be finite, non-negative numbers");
+  }
   const platformEscrowFee = 0.0; // 0% promotional during Start in DavNor launch
-  const isAboveThreshold = annualEarningsSoFar >= BIR_CWT_THRESHOLD;
-  const isTaxWithholdingApplicable = isAboveThreshold && !hasSwornDeclaration;
+  // RMC 8-2024: without the prescribed declaration, withholding applies
+  // regardless of gross remittances. A declaration cannot exempt amounts
+  // once cumulative gross remittances exceed PHP 500,000.
+  const isAboveThreshold = annualEarningsSoFar > BIR_CWT_THRESHOLD;
+  const isTaxWithholdingApplicable = isAboveThreshold || !hasSwornDeclaration;
 
   const withholdingTaxAmount = isTaxWithholdingApplicable
     ? Math.round(grossAmount * BIR_CWT_RATE * 100) / 100
     : 0.0;
 
   const netFreelancerDisbursement =
-    grossAmount - withholdingTaxAmount - platformEscrowFee;
+    Math.round((grossAmount - withholdingTaxAmount - platformEscrowFee) * 100) / 100;
 
   return {
     grossAmount,
@@ -71,7 +79,7 @@ export function calculateTaxWithholding(
     withholdingTaxAmount,
     netFreelancerDisbursement,
     platformEscrowFee,
-    atcCode: "WI700", // Online marketplace seller CWT
+    atcCode: "WI760", // Historical RR 16-2023 individual marketplace code; superseded in 2025.
     rdoJurisdiction: PROVINCIAL_RDO,
   };
 }
@@ -90,16 +98,16 @@ export function generateBir2307Voucher(
   const quarter = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
 
   return {
-    certificateNumber: `2307-DVO-${Math.floor(100000 + Math.random() * 900000)}`,
+    certificateNumber: `DRAFT-2307-${crypto.randomUUID()}`,
     quarter,
     payeeName,
-    payeeTin: payeeTin || "009-842-114-000",
+    payeeTin,
     payeeAddress,
     payorName: "Kugi Escrow Technologies Inc.",
-    payorTin: "010-332-901-000",
+    payorTin: "", // Must be supplied by the actual withholding agent before issuance.
     grossAmount,
     taxWithheld,
     dateGenerated: now.toISOString().split("T")[0],
-    atcCode: "WI700",
+    atcCode: "WI760",
   };
 }

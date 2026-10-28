@@ -13,7 +13,7 @@ export function AntiScamBanner() {
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
           <span>
-            <strong>Kugi Escrow Protected:</strong> All milestone payments, deliverables, and communication are insured under PhilSys Tier-3 identity guarantees.
+            <strong>Kugi Safety Tip:</strong> Keep payments and project records in Kugi so they are available when you need help resolving a dispute.
           </span>
         </div>
       </div>
@@ -32,11 +32,11 @@ export function AntiScamBanner() {
           </div>
           <div className="text-slate-700 dark:text-slate-300 font-medium mt-1 leading-relaxed">
             {lastScamWarning ||
-              "For your financial protection, keep all communication, files, and disbursements inside Kugi Escrow. External payment requests (personal GCash, phone numbers, or offline transfers) void your 100% milestone dispute and refund insurance under RA 11967."}
+              "For your financial protection, keep payments and project records in Kugi. Review unexpected external payment requests before sending money, and use File Dispute if you need help."}
           </div>
           <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
             <Info className="w-3.5 h-3.5" />
-            <span>Escrow guarantee covers 100% of deposited milestone funds when retained on-platform.</span>
+            <span>RA 11967 supports consumer redress. Keep transaction records and use the platform dispute process; statutory rights still apply.</span>
           </div>
         </div>
       </div>

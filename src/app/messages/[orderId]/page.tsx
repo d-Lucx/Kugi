@@ -22,6 +22,7 @@ import { useKugiStore } from "@/lib/store";
 import { formatCurrency } from "@/lib/tax-calculator";
 import { InspectionTimer } from "@/components/escrow/InspectionTimer";
 import { AntiScamBanner } from "@/components/chat/AntiScamBanner";
+import { BirTaxBreakdownModal } from "@/components/tax/BirTaxBreakdownModal";
 
 export default function WorkroomPage() {
   const params = useParams();
@@ -78,6 +79,9 @@ export default function WorkroomPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {activeMilestone?.status === "UNDER_INSPECTION" && (
+        <InspectionTimer inspectionEndAt={activeMilestone.inspectionEndAt} sticky />
+      )}
       {/* Header Bar */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -261,7 +265,7 @@ export default function WorkroomPage() {
           )}
 
           {/* Active Deliverable Box */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div id="inspection-details" className="scroll-mt-44 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-xs font-bold text-navy uppercase tracking-wider">
                 Inspection Deliverable
@@ -320,8 +324,9 @@ export default function WorkroomPage() {
                 <span>BIR RR 16-2023 Tax Notice</span>
               </div>
               <p className="text-[11px] text-amber-800">
-                Approving this release automatically withholds 0.5% Creditable Withholding Tax ({formatCurrency((activeMilestone?.escrowDeposit || 0) * 0.005)}) and issues a signed Form 2307 voucher.
+                Estimated creditable withholding tax is 1% of the 50% tax base ({formatCurrency((activeMilestone?.escrowDeposit || 0) * 0.005)}). Review the breakdown and download a Form 2307 preparation dossier.
               </p>
+              <BirTaxBreakdownModal grossAmount={activeMilestone?.escrowDeposit || 0} />
             </div>
 
             {/* Action Buttons */}

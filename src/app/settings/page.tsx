@@ -297,15 +297,15 @@ export default function SettingsPage() {
                   Quarterly BIR Form 2307 Tax Withholding Dossier
                 </span>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Under BIR RR 16-2023, digital platform operators withhold 0.5% Creditable Withholding Tax (CWT) on qualifying accounts. You can download signed Form 2307 certificates for quarterly filing with BIR RDO 112 (Tagum City).
+                  Under BIR RR 16-2023, digital platform operators withhold 0.5% Creditable Withholding Tax (CWT) on qualifying accounts. Open a contract workroom to review the tax estimate and prepare a draft Form 2307 dossier. Obtain the signed certificate from your withholding agent.
                 </p>
                 <div className="pt-2">
                   <Link
-                    href="/api/tax/bir2307?payee=Mark+Tan"
+                    href="/dashboard"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-navy hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download Q3 2026 BIR Form 2307 Dossier</span>
+                    <span>Open Contracts for Tax Dossiers</span>
                   </Link>
                 </div>
               </div>

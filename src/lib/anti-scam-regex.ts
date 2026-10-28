@@ -11,11 +11,11 @@ export interface ScamScanResult {
   warningMessage?: string;
 }
 
-const PH_MOBILE_REGEX = /(?:\+?63|0)[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/gi;
-const GCASH_WALLET_REGEX = /\b(?:gcash|maya|paymaya|g-cash)[\s:=-]+(?:#|no\.?|account|acct)?[\s:=-]*(?:\+?63|0)?[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/gi;
-const TELEGRAM_REGEX = /(?:t\.me\/|telegram[\s:]+@?|@[\w_]{5,32}\b)/gi;
-const VIBER_WHATSAPP_REGEX = /\b(?:viber|whatsapp)[\s:=-]+(?:\+?63|0)?[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/gi;
-const OFF_PLATFORM_KEYWORD_REGEX = /\b(?:direct transfer|off-platform|bypass escrow|direct gcash|send directly to my account|personal bpi|personal bdo|personal landbank|bdo transfer|bpi transfer)\b/gi;
+const PH_MOBILE_REGEX = /(?:\+?63|0)[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/i;
+const GCASH_WALLET_REGEX = /\b(?:gcash|maya|paymaya|g-cash)[\s:=-]+(?:#|no\.?|account|acct)?[\s:=-]*(?:\+?63|0)?[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/i;
+const TELEGRAM_REGEX = /(?:t\.me\/|telegram[\s:]+@?|@[\w_]{5,32}\b)/i;
+const VIBER_WHATSAPP_REGEX = /\b(?:viber|whatsapp)[\s:=-]+(?:\+?63|0)?[\s.-]?9\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/i;
+const OFF_PLATFORM_KEYWORD_REGEX = /\b(?:direct transfer|off-platform|bypass escrow|direct gcash|send directly to my account|personal bpi|personal bdo|personal landbank|bdo transfer|bpi transfer)\b/i;
 
 export function scanMessageForDisintermediation(content: string): ScamScanResult {
   const triggers: string[] = [];
@@ -52,7 +52,7 @@ export function scanMessageForDisintermediation(content: string): ScamScanResult
     triggers,
     severity: isSuspicious ? severity : "LOW",
     warningMessage: isSuspicious
-      ? "Security Advisory: Keep all communications and transactions inside Kugi. Direct off-platform wallet transfers violate Republic Act No. 11967 (ITA) consumer protections and void all Kugi 100% Milestone Escrow guarantees."
+      ? "Safety tip: This message may include external contact or payment details. Keep payments and project records in Kugi so they are available for dispute review. Check unexpected requests before sending money, and use File Dispute if you need help."
       : undefined,
   };
 }

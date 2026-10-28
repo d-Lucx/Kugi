@@ -1,10 +1,12 @@
 /**
  * Automated Verification Suite for Kugi (Kugi.ph)
  * Tests Escrow State Machine, 72-Hour Inspection Countdown,
- * Anti-Disintermediation Regex Shield, and BIR 2307 Withholding Tax Logic.
+ * Anti-Disintermediation Regex Shield, BIR 2307 Withholding Tax Logic,
+ * Client-Side SHA-256 Deliverable Hashing, and PhilSys ID Image Compression bounds.
  */
 
 import assert from "node:assert";
+import crypto from "node:crypto";
 
 // Test 1: Anti-Disintermediation Regex Shield
 console.log("--> Testing Anti-Disintermediation Regex Shield...");
@@ -100,6 +102,63 @@ assert.strictEqual(milestone.status, "FUNDS_RELEASED", "Approval must release fu
 assert.strictEqual(milestone.netDisbursement, 4975, "Net disbursement must be ₱4,975.00");
 
 console.log("✓ Escrow State Machine transitions and 72-hour protocol verified.");
+
+// Test 4: Web Crypto SHA-256 Deliverable Integrity Hashing
+console.log("--> Testing SHA-256 Deliverable Cryptographic Checksum Engine...");
+
+function computeDeliverableHash(buffer) {
+  const hash = crypto.createHash("sha256").update(buffer).digest("hex");
+  return `sha256:${hash}`;
+}
+
+const emptyHash = computeDeliverableHash(Buffer.from(""));
+assert.strictEqual(
+  emptyHash,
+  "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "Empty payload must match known standard SHA-256 test vector"
+);
+
+const samplePayload = Buffer.from("Tagum City Municipal Engineering Plan v1.0 Final Deliverable");
+const sampleHash = computeDeliverableHash(samplePayload);
+assert.ok(sampleHash.startsWith("sha256:"), "Hash must be prefixed with sha256:");
+assert.strictEqual(sampleHash.length, 71, "sha256: prefix + 64 hex characters = 71 chars");
+
+console.log("✓ SHA-256 Deliverable Cryptographic Checksum Engine passed.");
+
+// Test 5: PhilSys ID Downsampling & Dimension Constraints
+console.log("--> Testing PhilSys ID Image Downsampling Bounds...");
+
+function calculateDownsampleDimensions(origW, origH, maxDim = 1920) {
+  let width = origW;
+  let height = origH;
+  if (width > maxDim || height > maxDim) {
+    if (width > height) {
+      height = Math.round((height * maxDim) / width);
+      width = maxDim;
+    } else {
+      width = Math.round((width * maxDim) / height);
+      height = maxDim;
+    }
+  }
+  return { width, height };
+}
+
+// 4032x3024 12MP Smartphone Camera Image
+const downsampled = calculateDownsampleDimensions(4032, 3024, 1920);
+assert.strictEqual(downsampled.width, 1920, "Maximum width must be clamped to 1920px");
+assert.strictEqual(downsampled.height, 1440, "Aspect ratio must be preserved exactly (4:3 -> 1440)");
+
+// Vertical Portrait ID 3024x4032
+const downsampledPortrait = calculateDownsampleDimensions(3024, 4032, 1920);
+assert.strictEqual(downsampledPortrait.height, 1920, "Maximum height must be clamped to 1920px");
+assert.strictEqual(downsampledPortrait.width, 1440, "Aspect ratio must be preserved exactly (3:4 -> 1440)");
+
+// Small image under maxDim
+const smallImg = calculateDownsampleDimensions(800, 600, 1920);
+assert.strictEqual(smallImg.width, 800, "Images under maxDim must not be enlarged");
+assert.strictEqual(smallImg.height, 600, "Images under maxDim must retain height");
+
+console.log("✓ PhilSys ID Image Downsampling Bounds passed.");
 
 console.log("\n==================================================");
 console.log("ALL VERIFICATION CHECKS PASSED SUCCESSFULLY (100%)");
