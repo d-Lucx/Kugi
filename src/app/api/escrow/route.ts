@@ -2,10 +2,35 @@ import { NextResponse } from "next/server";
 import { transitionMilestone, MilestoneState } from "@/lib/escrow-engine";
 import { calculateTaxWithholding } from "@/lib/tax-calculator";
 
+// In-memory idempotency cache for deduplication of webhook retries and rapid repeated transitions
+const processedIdempotencyKeys = new Map<string, {
+  response: any;
+  timestamp: string;
+}>();
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, currentMilestone } = body;
+    const { action, currentMilestone, idempotencyKey } = body;
+    const reqIdempotencyKey = idempotencyKey || request.headers.get("Idempotency-Key");
+
+    // Idempotency guard: Return prior state immediately on repeated webhook payload
+    if (reqIdempotencyKey && processedIdempotencyKeys.has(reqIdempotencyKey)) {
+      const cached = processedIdempotencyKeys.get(reqIdempotencyKey)!;
+      return NextResponse.json(
+        {
+          ...cached.response,
+          idempotentReplay: true,
+          replayedAt: new Date().toISOString(),
+        },
+        {
+          headers: {
+            "X-Idempotency-Replay": "true",
+            "X-Idempotency-Key": reqIdempotencyKey,
+          },
+        }
+      );
+    }
 
     if (!action || !currentMilestone) {
       return NextResponse.json(
@@ -17,11 +42,25 @@ export async function POST(request: Request) {
     const updated = transitionMilestone(currentMilestone as MilestoneState, action);
     const tax = calculateTaxWithholding(updated.escrowDeposit);
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
-      milestone: updated,
+      milestone: {
+        ...updated,
+        idempotencyKey: reqIdempotencyKey || null,
+      },
       taxSummary: tax,
       timestamp: new Date().toISOString(),
+    };
+
+    if (reqIdempotencyKey) {
+      processedIdempotencyKeys.set(reqIdempotencyKey, {
+        response: responsePayload,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json(responsePayload, {
+      headers: reqIdempotencyKey ? { "X-Idempotency-Key": reqIdempotencyKey } : {},
     });
   } catch (error: any) {
     return NextResponse.json(
