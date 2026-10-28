@@ -5,6 +5,7 @@ const config: CapacitorConfig = {
   appName: "Kugi",
   webDir: "out",
   server: {
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     androidScheme: "https",
   },
 };
